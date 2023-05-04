@@ -1,8 +1,9 @@
 # 2_stepper_control
-##Project's name anh motivation
+## Project's name and motivation
 - This project is to familiarize myself with microcontrollers so i used arduino flatform
 - This project uses two stepers to control exactly the locate of a pen so we can pain any thing that we had programed for uC
 - Just feel interested in this product so i choose it to get acquainted with microcontrollers
+- After this project, change this arduino code to an orther uC that based on ARM architecture
 ## Hardware
 - Arduino Uno R3
 - 2 stepper driver A4988
