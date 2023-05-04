@@ -3,7 +3,7 @@
   
 Servo myservo;
 boolean servo_cond = false;
-#define liftPenUp() {myservo.write(16); delay(100); servo_cond = false;}
+#define liftPenUp() {myservo.write(25); delay(100); servo_cond = false;}
 #define liftPenDown() {myservo.write(0); delay(100); servo_cond = true;}
   
 int dirX = 4;
@@ -21,7 +21,8 @@ AccelStepper stepperY(1, stepY, dirY, enaY);
 // ratio: toc do toi da chay = maxSpeed() * ratio.
 // At "Setup" : vxMax = stepperX.maxSpeed() * ratio; vyMax = stepperY.maxSpeed() * ratio
 #define ratio 0.95
-float vxMax = 500;
+
+float vxMax = 500; 
 float vyMax = 500;
 
 // time to settling down the system after polling_the_paint before navigation.
@@ -47,8 +48,8 @@ float vyMax = 500;
 void moveToPoint(int a, int b) {
   int disX = a - stepperX.currentPosition();
   int disY = b - stepperY.currentPosition();
-  if(a < 0 || b < 0 || (disX == 0 && disY == 0)) {
-    //
+  if(a < 0 || b < 0 || (disX == 0 && disY == 0) || a > 15625 || b > 12500) {
+    return;
   } else {
       int sign_vx = 1;
       int sign_vy = 1;
@@ -274,8 +275,14 @@ void circle(int a, int b, int r) {
  * ve theo phuong trinh func voi x thuoc [start, end_point] (dv: step)
  */
 void paint_func(int a, int b, int start, int end_point, float func(int)) {
+    int sign_vx = 1;
+    if(start > end_point) {
+      sign_vx = -1;
+    }
     moveToPoint(a,b);
-    liftPenDown();
+    if(!servo_cond) {
+      liftPenDown();
+    }
     stepperX.setCurrentPosition(start);
     float dv[size_array];
     int pos[size_array];
@@ -290,14 +297,14 @@ void paint_func(int a, int b, int start, int end_point, float func(int)) {
             dx = 0;
             float temp = func(k);
             while(1) {
-                k += nstep_gather;
+                k += nstep_gather * sign_vx;
                 dx += nstep_gather;
-                if(k >= end_point) {
-                    dx -= (k - end_point);
+                if((k >= end_point && sign_vx == 1) || (sign_vx == -1 && k <= end_point)) {
+                    dx -= (k - end_point) * sign_vx;
                     k = end_point;
                 } 
                 dy = func(k) - temp; 
-                if((fabs(dy/dx) > 1.0/max_v_ratio && fabs(dy/dx) < max_v_ratio) || k == end_point) {
+                if((fabs(dy/dx) > 1.0/max_v_ratio && fabs(dy/dx) < max_v_ratio) || k == end_point || i == size_array) {
                     dv[i] = dy/dx;
                     pos[i] = k;
                     i++;
@@ -328,15 +335,15 @@ void paint_func(int a, int b, int start, int end_point, float func(int)) {
 //            Serial.println(pos[i]);
             stepperX.moveTo(pos[i]);
             if(fabs(dv[i]) < 1) {
-              stepperX.setSpeed(vxMax);
+              stepperX.setSpeed(vxMax * sign_vx);
               stepperY.setSpeed(vxMax * dv[i]);
             } else {
               if(dv[i] < 0) {
                   stepperY.setSpeed(vyMax * -1);
-                  stepperX.setSpeed(vyMax / dv[i] * -1);
+                  stepperX.setSpeed(vyMax * sign_vx / dv[i] * -1);
               } else {
                   stepperY.setSpeed(vyMax);
-                  stepperX.setSpeed(vyMax / dv[i]);
+                  stepperX.setSpeed(vyMax * sign_vx / dv[i]);
               }
             }
             while(stepperX.distanceToGo() != 0) {
@@ -347,11 +354,9 @@ void paint_func(int a, int b, int start, int end_point, float func(int)) {
     }
     stepperX.setCurrentPosition(a + end_point - start);
     stepperY.setCurrentPosition(b + func(end_point) - func(start));
-    Serial.print(stepperX.currentPosition());
-    Serial.print(" ");
-    Serial.println(stepperY.currentPosition());
-    liftPenUp();
-    delay(hold);
+//    Serial.print(stepperX.currentPosition());
+//    Serial.print(" ");
+//    Serial.println(stepperY.currentPosition());
 }
 
 /*
@@ -400,8 +405,35 @@ float f5(int x) {
   temp = 0.4 * cos(2 * temp - 9);
   return temp / step_length;
 }
+
+void test1() {
+  circle(2500, 2000, 2000);
+  delay(1000);
+  star(2000, 3000, 1000);
+  delay(1000);
+  moveToPoint(0, 0);
+  paint_func(2000, 4000, -2000, 2000, parabol);
+  moveToPoint(0, 0);
+  delay(1000);
+  paint_func(1000, 3000, -3000, 3000, sin_2x);
+  moveToPoint(0, 0);
+  delay(1000);
+}
+
+void test2() {
+  paint_func(4000, 3000, 2000, 4000, f1);
+  paint_func(6000, 3000, 4000, 6000, f2);
+  paint_func(8000, 3000, 6000, 2000, f3);
+  liftPenUp();
+  paint_func(2000, 2300 + round(f4(2000)), 2000, 10000, f4);
+  liftPenUp();
+  paint_func(10000, 2300 + round(f5(10000)), 10000, 2000, f5);
+  liftPenUp();
+  moveToPoint(0, 0);
+  delay(3000);
+}
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   myservo.attach(12);
   liftPenUp();
   stepperX.setMaxSpeed(950);
@@ -415,31 +447,56 @@ void setup() {
   stepperX.setCurrentPosition(0);
   stepperY.setCurrentPosition(0);
   pinMode(13, OUTPUT);
-  delay(5000);
+  delay(8000);
   digitalWrite(13, HIGH);
   digitalWrite(enaY, LOW);
   digitalWrite(enaX, LOW);
-  delay(1000);
+  delay(150);
 }
 
+const byte REQUEST_DATA = 1;
+const byte REQUEST_CONNECT = 2;
+int hight;
+int low;
+int result_x;
+int result_y;
+byte pos_receive[4];
+
 void loop() {
-  circle(2500, 2000, 2000);
-  delay(1000);
-  star(2000, 3000, 1000);
-  delay(1000);
-  moveToPoint(0, 0);
-  paint_func(2000, 4000, -2000, 2000, parabol);
-  moveToPoint(0, 0);
-  delay(1000);
-  paint_func(1000, 3000, -3000, 3000, sin_2x);
-  moveToPoint(0, 0);
-  delay(1000);
-  
-  paint_func(2000, 3000, 2000, 4000, f1);
-  paint_func(4000, 3000, 4000, 6000, f2);
-  paint_func(2000, 3000, 2000, 6000, f3);
-  paint_func(0, 2300 + round(f4(0)), 0, 8000, f4);
-  paint_func(0, 2300 + round(f5(0)), 0, 8000, f5);
-  moveToPoint(0, 0);
-  delay(3000);
+//  while(state_connect[0] != REQUEST_CONNECT) {
+//    Serial.write(REQUEST_CONNECT);
+//    if(Serial.available() > 0) {
+//      Serial.readBytes(state_connect, 1);
+//    }
+//    for(int i = 0; i <10000; i++);
+//    if(Serial.available() > 0) {
+//      Serial.readBytes(state_connect, 1);
+//    }
+//  }
+//  if(state_connect[0] == REQUEST_CONNECT) {
+//    Serial.write(REQUEST_DATA);
+//    while(Serial.available() < 4) {};
+//    Serial.readBytes(pos_receive, 4);
+//    hight = (int)(pos_receive[1]);
+//    hight = hight & 0x00FF;
+//    low = (int)(pos_receive[0]);
+//    low = low & 0x00FF;
+//    result_x = hight * 256 + low;
+//    hight = (int)(pos_receive[3]);
+//    hight = hight & 0x00FF;
+//    low = (int)(pos_receive[2]);
+//    low = low & 0x00FF;
+//    result_y = hight * 256 + low;
+//    if((result_x == 0xFFFF) && (result_y == 0xFFFF)) {
+//      Serial.write((byte)(6));
+//      liftPenUp();
+//    } else if ((result_x == 0xFEFE) && (result_y == 0xFEFE)) {
+//      Serial.write((byte)(7));
+//      liftPenDown();
+//    } else {
+//      Serial.write((byte)(8));
+//      moveToPoint(result_x, result_y);
+//    }
+//  }
+  test2();
 }
