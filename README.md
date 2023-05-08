@@ -1,23 +1,23 @@
 # 2_stepper_control
 ## Project's name and motivation
 - This project is to familiarize myself with microcontrollers so i used arduino flatform
-- This project uses two stepers to control exactly the locate of a pen so we can pain any thing that we had programed for uC
+- This project uses two stepers to control exactly the locate of a pen so we can paint any thing that we had programed for uC
 - Just feel interested in this product so i choose it to get acquainted with microcontrollers
 - After this project, change this arduino code to an orther uC that based on ARM architecture
 ## Hardware
 - Arduino Uno R3
 - 2 stepper driver A4988
 - An adapter 12V-5A to run the two motors
-- HC- 05 to comunicate with Pain app (a desktop app that i am programming. This app allows to draw on a workspace and send this drawing via HC-05 to arduino)
+- HC- 05 to comunicate with Paint app (a desktop app that i am programming. This app allows to draw on a workspace and send this drawing via HC-05 to arduino)
 - L7805 to perform as a voltage regulater. This module is used to supply 5V DC for arduino, A4988s and HC-05
 ## Libraries and Sofwares
 - Using accelStepper Library to control the two steppers
 - Using KiCad 6.0 for skematic and PCB
 ## Main feature
-- using fuction pain_func() to pain any function (add function into source code before upload the code to arduino), this funtion will calculate points of the function
+- using fuction pain_func() to paint any function (add function into source code before upload the code to arduino), this funtion will calculate points of the function
 and control a pen according to the points.
 -Demo: (using test2() funtion)
-- using Pain app to create pictuce and send data through HC-05 to pain it! 
+- using Paint app to create pictuce and send data through HC-05 to paint it! 
 debugging :(
 ![demo](https://user-images.githubusercontent.com/122275694/236265364-1ec3fe52-bba9-41c8-bd6c-d334d6a53197.jpg)
 ## Skematic
